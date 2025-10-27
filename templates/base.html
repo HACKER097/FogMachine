@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FogMachine{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        async function logout() {
+            const res = await fetch('/logout', { method: 'POST' });
+            if (res.ok) {
+                window.location.href = '/onboarding';
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>FogMachine</h1>
+        <nav>
+            {% block nav %}
+                <script>
+                    // This is a placeholder and will be handled by the server-side templates
+                </script>
+            {% endblock %}
+        </nav>
+    </header>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

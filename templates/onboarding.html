@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+    <div id="user-welcome" style="display: none;">
+        <h2>Welcome, <span id="welcome-username">User</span>!</h2>
+        <p>You are logged in as a standard user. There are no actions for this role.</p>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div id="auth-forms">
+        <div class="tabs">
+            <button class="tab-link active" onclick="openTab(event, 'login')">Login</button>
+            <button class="tab-link" onclick="openTab(event, 'register')">Register</button>
+        </div>
+
+        <div id="login" class="tab-content" style="display: block;">
+            <form id="login-form">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit">Login</button>
+                <p id="login-msg" class="message"></p>
+            </form>
+        </div>
+
+        <div id="register" class="tab-content">
+            <form id="register-form">
+                <h2>Register</h2>
+                <div class="form-group">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-role">Role</label>
+                    <select id="reg-role">
+                        <option value="worker">Worker</option>
+                        <option value="provider">Provider</option>
+                    </select>
+                </div>
+                <button type="submit">Register</button>
+                <p id="register-msg" class="message"></p>
+            </form>
+        </div>
+    </div>
+
+<script>
+    // Tab switching logic
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    // Login Handler
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Login form submitted');
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const msgEl = document.getElementById('login-msg');
+
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            console.log('Response from /login:', res);
+            const data = await res.json();
+            console.log('Data from /login:', data);
+
+            if (res.ok) {
+                console.log('Redirecting to /');
+                window.location.href = '/'; // Redirect to backend for role routing
+            } else {
+                msgEl.textContent = data.msg;
+                msgEl.className = 'message error';
+            }
+        } catch (error) {
+            console.error('Error during login:', error);
+            msgEl.textContent = 'An unexpected error occurred. Please try again.';
+            msgEl.className = 'message error';
+        }
+    });
+
+    // Register Handler
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('reg-username').value;
+        const password = document.getElementById('reg-password').value;
+        const role = document.getElementById('reg-role').value;
+        const msgEl = document.getElementById('register-msg');
+
+        const res = await fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, role })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            msgEl.textContent = 'Registration successful! Please login.';
+            msgEl.className = 'message success';
+            // Switch to login tab
+            document.querySelector('.tab-link[onclick*="login"]').click();
+        } else {
+            msgEl.textContent = data.msg;
+            msgEl.className = 'message error';
+        }
+    });
+</script>
+{% endblock %}

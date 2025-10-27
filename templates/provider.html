@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Provider Dashboard{% endblock %}
+
+{% block content %}
+    <h2>Provider Dashboard</h2>
+    <p>Start a new campaign to spread an opinion.</p>
+
+    <form id="opinion-form">
+        <div class="form-group">
+            <label for="opinion">Opinion</label>
+            <textarea id="opinion" rows="4" required></textarea>
+        </div>
+        <div class="form-group-inline">
+            <div class="form-group">
+                <label for="post-count">Post Count</label>
+                <input type="number" id="post-count" value="10" required>
+            </div>
+            <div class="form-group">
+                <label for="comment-count">Comment Count</label>
+                <input type="number" id="comment-count" value="10" required>
+            </div>
+        </div>
+        <button type="submit" id="submit-btn">Start Campaign</button>
+    </form>
+
+    <h3>Campaign Log</h3>
+    <div id="log-box" class="log-box">
+        <div class="log-entry log-info">Awaiting campaign start...</div>
+    </div>
+
+<script>
+    const form = document.getElementById('opinion-form');
+    const logBox = document.getElementById('log-box');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function addLogEntry(data) {
+        const entry = document.createElement('div');
+        entry.classList.add('log-entry');
+
+        let content = '';
+        const timestamp = `[${new Date().toLocaleTimeString()}]`;
+
+        if (data.status.includes('Error')) {
+            entry.classList.add('log-error');
+            content = `<strong>${data.status}</strong>: ${data.message}`;
+        } else if (data.status.includes('Found') || data.status.includes('Got') || data.status.includes('Filtered')) {
+            entry.classList.add('log-success');
+            content = `<strong>${data.status}</strong>`;
+            if (data.subreddits) {
+                content += `: ${data.subreddits.join(', ')}`;
+            }
+            if (data.count !== undefined) {
+                content += `: ${data.count}`;
+            }
+        } else if (data.status.includes('Finished replying')) {
+            entry.classList.add('log-success');
+            content = `<strong>${data.status}</strong>: ${data.replies.length} replies posted.`;
+        }
+        else {
+            entry.classList.add('log-info');
+            content = `<strong>${data.status}</strong>`;
+        }
+
+        entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${content}`;
+        logBox.appendChild(entry);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        logBox.innerHTML = '<div class="log-entry log-info">Starting campaign...</div>';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Campaign in Progress...';
+
+        try {
+            const res = await fetch('/provider/spread_opinion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'op': document.getElementById('opinion').value,
+                    'post_count': parseInt(document.getElementById('post-count').value),
+                    'comment_count': parseInt(document.getElementById('comment-count').value)
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.msg || `HTTP error! status: ${res.status}`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    addLogEntry({status: 'Stream finished.'});
+                    break;
+                }
+                
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        const dataPart = line.substring(5).trim();
+                        if (dataPart) {
+                            try {
+                                const jsonData = JSON.parse(dataPart);
+                                addLogEntry(jsonData);
+                            } catch (e) {
+                                console.error('Error parsing JSON:', e);
+                                addLogEntry({status: 'Error', message: 'Received invalid data from server.'});
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            addLogEntry({status: 'Error', message: error.message});
+            if (error.message.includes('401') || error.message.includes('422')) {
+                logout();
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Start Campaign';
+        }
+    });
+</script>
+{% endblock %}

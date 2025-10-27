@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Worker Dashboard{% endblock %}
+
+{% block content %}
+    <h2>Worker Dashboard</h2>
+    <p>Submit your Reddit App credentials here. They will be encrypted on the server.</p>
+
+    <form id="creds-form">
+        <div class="form-group">
+            <label for="client-id">CLIENT_ID</label>
+            <input type="text" id="client-id" required>
+        </div>
+        <div class="form-group">
+            <label for="client-secret">CLIENT_SECRET</label>
+            <input type="password" id="client-secret" required>
+        </div>
+        <div class="form-group">
+            <label for="reddit-username">REDDIT_USERNAME</label>
+            <input type="text" id="reddit-username" required>
+        </div>
+        <div class="form-group">
+            <label for="reddit-password">REDDIT_PASSWORD</label>
+            <input type="password" id="reddit-password" required>
+        </div>
+        <button type="submit">Save Credentials</button>
+        <p id="creds-msg" class="message"></p>
+    </form>
+
+<script>
+    // Credentials Handler
+    document.getElementById('creds-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msgEl = document.getElementById('creds-msg');
+
+        const res = await fetch('/worker/credentials', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                'CLIENT_ID': document.getElementById('client-id').value,
+                'CLIENT_SECRET': document.getElementById('client-secret').value,
+                'REDDIT_USERNAME': document.getElementById('reddit-username').value,
+                'REDDIT_PASSWORD': document.getElementById('reddit-password').value
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            msgEl.textContent = data.msg;
+            msgEl.className = 'message success';
+            document.getElementById('creds-form').reset();
+        } else {
+            msgEl.textContent = data.msg;
+            msgEl.className = 'message error';
+            if (res.status === 401 || res.status === 422) { // Token expired or invalid
+                logout();
+            }
+        }
+    });
+</script>
+{% endblock %}

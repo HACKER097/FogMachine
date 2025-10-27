@@ -90,11 +90,28 @@ class FogMachine:
         return rs
 
     def spread_opinion(self, op, post_count, comment_count):
+        yield {"status": "Finding subreddits"}
         subs = self.get_subreddits(op)
+        yield {"status": "Found subreddits", "subreddits": subs}
+
+        yield {"status": "Getting posts"}
         ps = self.bot.get_posts(subs, post_count)
+        yield {"status": "Got posts", "count": len(ps)}
+
+        yield {"status": "Filtering posts"}
         ps = self.filter_posts(ps, op)
+        yield {"status": "Filtered posts", "count": len(ps)}
+
+        yield {"status": "Filtering comments"}
         cs = self.filter_comments(ps, comment_count, op)
-        self.reply(cs, op)
+        yield {"status": "Filtered comments", "count": len(cs)}
+
+        if cs == []:
+            return
+
+        yield {"status": "Replying to comments"}
+        replies = self.reply(cs, op)
+        yield {"status": "Finished replying", "replies": replies}
 
 
 
