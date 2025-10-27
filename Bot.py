@@ -30,6 +30,7 @@ class Bot:
         This function posts a comment on a Reddit post given its ID and the comment text.
         """
         if self.test:
+            print("TESTING")
             print(f"[BOT] Comment: {c['body']}")
             print(f"[BOT] Reply: {text}")
             print()
@@ -45,7 +46,7 @@ class Bot:
         
         return {
             "user_id": self.userid,
-            "url": f"https://reddit.com{url}",
+            "url": url,
             "original_comment": c,
             "reply_text": text
         }

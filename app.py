@@ -19,6 +19,8 @@ jwt = JWTManager(app)
 
 DATABASE = 'database.db'
 
+test = False
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -178,7 +180,7 @@ def spread_opinion_route():
 
     def generate_logs():
         try:
-            fog_machine = FogMachine(fog_instances, os.getenv("TEST"))
+            fog_machine = FogMachine(fog_instances, test)
             subreddits = fog_machine.get_subreddits(op)
             yield f"data: {json.dumps({'status': 'Found subreddits', 'subreddits': subreddits})}\n\n"
         except Exception as e:
@@ -233,7 +235,7 @@ def continue_campaign_route():
                 if not instances:
                     raise Exception("No worker credentials found.")
 
-                fog_machine = FogMachine(instances, os.getenv("TEST"))
+                fog_machine = FogMachine(instances, test)
                 for log_message in fog_machine.spread_opinion(op, post_count, comment_count, subreddits):
                     yield f"data: {json.dumps(log_message)}\n\n"
 
