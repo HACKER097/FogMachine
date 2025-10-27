@@ -2,104 +2,355 @@
 {% block title %}Provider Dashboard{% endblock %}
 
 {% block content %}
-    <h2>Provider Dashboard</h2>
-    <p>Start a new campaign to spread an opinion.</p>
+    <div class="dashboard-header">
+        <h2>Provider Dashboard</h2>
+        <p>Start a new campaign to spread an opinion.</p>
+    </div>
 
     <form id="opinion-form">
         <div class="form-group">
             <label for="opinion">Opinion</label>
-            <textarea id="opinion" rows="4" required></textarea>
+            <textarea id="opinion" rows="3" required placeholder="e.g., Pineapple belongs on pizza"></textarea>
         </div>
         <div class="form-group-inline">
-            <div class="form-group">
-                <label for="post-count">Post Count</label>
-                <input type="number" id="post-count" value="10" required>
+            <div class="form-group slider-group">
+                <label for="post-count">Posts to Fetch: <span id="post-count-value">10</span></label>
+                <input type="range" id="post-count" min="1" max="30" value="10">
             </div>
-            <div class="form-group">
-                <label for="comment-count">Comment Count</label>
-                <input type="number" id="comment-count" value="10" required>
+            <div class="form-group slider-group">
+                <label for="comment-count">Comments to Fetch: <span id="comment-count-value">10</span></label>
+                <input type="range" id="comment-count" min="1" max="30" value="10">
             </div>
         </div>
-        <button type="submit" id="submit-btn">Start Campaign</button>
+        <button type="submit" id="submit-btn"><i class="fas fa-rocket"></i> Launch Campaign</button>
     </form>
 
-    <h3>Campaign Log</h3>
-    <div id="log-box" class="log-box">
-        <div class="log-entry log-info">Awaiting campaign start...</div>
+    <div id="campaign-dashboard" class="hidden">
+        <div class="campaign-column" id="subreddits-column">
+            <h4 class="column-title"><i class="fas fa-bullseye"></i> Targeted Subreddits</h4>
+            <div class="column-content" id="subreddits-content">
+                <div class="spinner" style="display: none;"></div>
+                <div id="subreddit-confirmation" class="hidden">
+                    <h4>Confirm Subreddits</h4>
+                    <p>AI has suggested the following subreddits. You can remove them or add your own before continuing.</p>
+                    <div id="subreddit-tags-container"></div>
+                    <div class="add-subreddit-form">
+                        <input type="text" id="add-subreddit-input" placeholder="Add a subreddit (e.g., 'gaming')...">
+                        <button type="button" id="add-subreddit-btn"><i class="fas fa-plus"></i> Add</button>
+                    </div>
+                    <button type="button" id="confirm-subreddits-btn"><i class="fas fa-check"></i> Confirm and Continue Campaign</button>
+                </div>
+            </div>
+        </div>
+        <div class="campaign-column" id="posts-column">
+            <h4 class="column-title"><i class="fas fa-newspaper"></i> Scanned Posts</h4>
+            <div class="column-content" id="posts-content"></div>
+        </div>
+        <div class="campaign-column" id="comments-column">
+            <h4 class="column-title"><i class="fas fa-comments"></i> Targeted Comments</h4>
+            <div class="column-content" id="comments-content"></div>
+        </div>
+        <div class="campaign-column" id="replies-column">
+            <h4 class="column-title"><i class="fas fa-paper-plane"></i> Replies Sent</h4>
+            <div class="column-content" id="replies-content"></div>
+        </div>
     </div>
 
-<script>
+    <div id="confirmation-dialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog-box">
+            <h2>Confirm Campaign</h2>
+            <p>Please review your campaign details before launching.</p>
+            <div id="confirmation-summary"></div>
+            <div class="dialog-buttons">
+                <button id="cancel-campaign-btn" class="nav-btn">Cancel</button>
+                <button id="confirm-campaign-btn">Launch Campaign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
     const form = document.getElementById('opinion-form');
-    const logBox = document.getElementById('log-box');
     const submitBtn = document.getElementById('submit-btn');
+    const dashboard = document.getElementById('campaign-dashboard');
+    const columns = {
+        subreddits: document.getElementById('subreddits-column'),
+        posts: document.getElementById('posts-column'),
+        comments: document.getElementById('comments-column'),
+        replies: document.getElementById('replies-column')
+    };
+    const contents = {
+        subreddits: document.getElementById('subreddits-content'),
+        posts: document.getElementById('posts-content'),
+        comments: document.getElementById('comments-content'),
+        replies: document.getElementById('replies-content')
+    };
+    const confirmationDialog = document.getElementById('confirmation-dialog');
+    const confirmationSummary = document.getElementById('confirmation-summary');
+    const confirmCampaignBtn = document.getElementById('confirm-campaign-btn');
+    const cancelCampaignBtn = document.getElementById('cancel-campaign-btn');
 
-    function addLogEntry(data) {
-        const entry = document.createElement('div');
-        entry.classList.add('log-entry');
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        let content = '';
-        const timestamp = `[${new Date().toLocaleTimeString()}]`;
+    function setFocus(focusedColumnKey) {
+        let minimizedIndex = 0;
+        const minimizedHeight = 75; // Corresponds to CSS height
+        const minimizedGap = 16; // 1rem
 
-        if (data.status.includes('Error')) {
-            entry.classList.add('log-error');
-            content = `<strong>${data.status}</strong>: ${data.message}`;
-        } else if (data.status.includes('Found') || data.status.includes('Got') || data.status.includes('Filtered')) {
-            entry.classList.add('log-success');
-            content = `<strong>${data.status}</strong>`;
-            if (data.subreddits) {
-                content += `: ${data.subreddits.join(', ')}`;
+        for (const key in columns) {
+            const col = columns[key];
+            if (key === focusedColumnKey) {
+                col.classList.remove('minimized');
+                col.classList.add('focused');
+                col.style.top = '0px'; // Ensure focused column is at the top
+            } else {
+                col.classList.remove('focused');
+                col.classList.add('minimized');
+                col.style.top = `${minimizedIndex * (minimizedHeight + minimizedGap)}px`;
+                minimizedIndex++;
             }
-            if (data.count !== undefined) {
-                content += `: ${data.count}`;
-            }
-        } else if (data.status.includes('Finished replying')) {
-            entry.classList.add('log-success');
-            content = `<strong>${data.status}</strong>: ${data.replies.length} replies posted.`;
         }
-        else {
-            entry.classList.add('log-info');
-            content = `<strong>${data.status}</strong>`;
-        }
-
-        entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${content}`;
-        logBox.appendChild(entry);
-        logBox.scrollTop = logBox.scrollHeight;
     }
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    Object.keys(columns).forEach(key => {
+        columns[key].addEventListener('click', () => {
+            if (columns[key].classList.contains('minimized')) {
+                setFocus(key);
+            }
+        });
+    });
 
-        logBox.innerHTML = '<div class="log-entry log-info">Starting campaign...</div>';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Campaign in Progress...';
+    function createElement(tag, classes = [], content = '') {
+        const el = document.createElement(tag);
+        if (classes.length > 0) el.classList.add(...classes);
+        el.innerHTML = content;
+        return el;
+    }
 
+    function createPostCard(post) {
+        const card = createElement('div', ['campaign-card', 'post-card'], `
+            <div class="card-header">
+                <a href="${post.permalink}" target="_blank">${post.title}</a>
+                <span class="card-meta">r/${post.subreddit} | <i class="fas fa-arrow-up"></i> ${post.score}</span>
+            </div>
+            <div class="card-body">
+                <p>${post.selftext.substring(0, 100)}${post.selftext.length > 100 ? '...' : ''}</p>
+            </div>
+            <div class="card-status"><i class="fas fa-hourglass-start"></i> Pending</div>
+        `);
+        card.id = `post-${post.id}`;
+        contents.posts.appendChild(card);
+        return card;
+    }
+
+    function createCommentCard(comment) {
+        const card = createElement('div', ['campaign-card', 'comment-card'], `
+            <div class="card-header">
+                <a href="${comment.permalink}" target="_blank">Comment by ${comment.author}</a>
+                <span class="card-meta"><i class="fas fa-arrow-up"></i> ${comment.score}</span>
+            </div>
+            <div class="card-body">
+                <p>${comment.body}</p>
+            </div>
+            <div class="card-status"><i class="fas fa-hourglass-start"></i> Pending</div>
+        `);
+        card.id = `comment-${comment.id}`;
+        contents.comments.appendChild(card);
+        return card;
+    }
+    
+    function createReplyCard(reply) {
+        const card = createElement('div', ['campaign-card', 'reply-card'], `
+            <div class="card-header">
+                <a href="${reply.url}" target="_blank">Reply Sent</a>
+                 <span class="card-meta">to ${reply.original_comment.author}</span>
+            </div>
+            <div class="card-body">
+                 <p>"${reply.reply_text}"</p>
+            </div>
+            <div class="card-status"><i class="fas fa-check-circle"></i> Sent</div>
+        `);
+        contents.replies.appendChild(card);
+        return card;
+    }
+
+    function setupSubredditEditing(subreddits) {
+        const spinner = contents.subreddits.querySelector('.spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+
+        const container = document.getElementById('subreddit-tags-container');
+        const addInput = document.getElementById('add-subreddit-input');
+        const addBtn = document.getElementById('add-subreddit-btn');
+        const confirmBtn = document.getElementById('confirm-subreddits-btn');
+        const confirmationUI = document.getElementById('subreddit-confirmation');
+
+        container.innerHTML = '';
+        let currentSubreddits = [...subreddits];
+
+        function renderTags() {
+            container.innerHTML = '';
+            currentSubreddits.forEach(sub => {
+                const tag = createElement('div', ['subreddit-tag'], `
+                    ${sub}
+                    <button class="remove-tag-btn" data-sub="${sub}">&times;</button>
+                `);
+                container.appendChild(tag);
+            });
+        }
+
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-tag-btn')) {
+                const subToRemove = e.target.dataset.sub;
+                currentSubreddits = currentSubreddits.filter(s => s !== subToRemove);
+                renderTags();
+            }
+        });
+
+        addBtn.addEventListener('click', () => {
+            const newSub = addInput.value.trim();
+            if (newSub && !currentSubreddits.includes(newSub)) {
+                currentSubreddits.push(newSub);
+                addInput.value = '';
+                renderTags();
+            }
+        });
+
+        addInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addBtn.click();
+            }
+        });
+        
+        renderTags();
+        confirmationUI.classList.remove('hidden');
+
+        return new Promise(resolve => {
+            confirmBtn.onclick = () => {
+                confirmationUI.classList.add('hidden');
+                resolve(currentSubreddits);
+            };
+        });
+    }
+
+    async function handleStream(data) {
+        switch (data.status) {
+            case 'Found subreddits':
+                setFocus('subreddits');
+                contents.subreddits.querySelector('.spinner').style.display = 'none';
+                const confirmedSubreddits = await setupSubredditEditing(data.subreddits);
+                showConfirmationDialog(confirmedSubreddits);
+                break;
+            case 'Got posts':
+                setFocus('posts');
+                contents.posts.innerHTML = '';
+                for (let i = 0; i < data.posts.length; i++) {
+                    createPostCard(data.posts[i]);
+                    await sleep(200);
+                }
+                break;
+            case 'Filtered posts':
+                setFocus('posts');
+                for (const card of contents.posts.querySelectorAll('.post-card')) {
+                    card.classList.add('scanning');
+                    await sleep(250);
+                }
+                await sleep(1200);
+
+                contents.posts.querySelectorAll('.post-card').forEach(card => {
+                    card.classList.remove('scanning');
+                    const postId = card.id.split('-')[1];
+                    if (!data.posts.some(p => p.id === postId)) {
+                        card.classList.add('filtered-out');
+                        card.querySelector('.card-status').innerHTML = '<i class="fas fa-times-circle"></i> Filtered';
+                        card.addEventListener('animationend', () => card.style.display = 'none', { once: true });
+                    } else {
+                        card.querySelector('.card-status').innerHTML = '<i class="fas fa-check-circle"></i> Selected';
+                        card.classList.add('selected');
+                    }
+                });
+                break;
+            case 'Filtered comments':
+                setFocus('comments');
+                contents.comments.innerHTML = '';
+                for (let i = 0; i < data.comments.length; i++) {
+                    createCommentCard(data.comments[i]);
+                    await sleep(200);
+                }
+                break;
+            case 'Finished replying':
+                setFocus('replies');
+                const repliedCommentIds = new Set(data.replies.map(r => r.original_comment.id));
+
+                contents.comments.querySelectorAll('.comment-card').forEach(card => {
+                    const commentId = card.id.split('-')[1];
+                    if (!repliedCommentIds.has(commentId)) {
+                        card.classList.add('filtered-out');
+                        card.querySelector('.card-status').innerHTML = '<i class="fas fa-times-circle"></i> Not Replied';
+                        card.addEventListener('animationend', () => card.style.display = 'none', { once: true });
+                    } else {
+                         card.classList.add('replied');
+                         card.querySelector('.card-status').innerHTML = '<i class="fas fa-paper-plane"></i> Replied';
+                    }
+                });
+                
+                contents.replies.innerHTML = '';
+                for (const reply of data.replies) {
+                    createReplyCard(reply);
+                    await sleep(250);
+                }
+                break;
+        }
+    }
+
+    function showConfirmationDialog(subreddits) {
+        const opinion = document.getElementById('opinion').value;
+        const postCount = document.getElementById('post-count').value;
+        const commentCount = document.getElementById('comment-count').value;
+
+        confirmationSummary.innerHTML = `
+            <p><strong>Opinion:</strong> ${opinion}</p>
+            <p><strong>Posts to Fetch:</strong> ${postCount}</p>
+            <p><strong>Comments to Fetch:</strong> ${commentCount}</p>
+            <p><strong>Subreddits:</strong> ${subreddits.join(', ')}</p>
+        `;
+
+        confirmationDialog.style.display = 'flex';
+
+        confirmCampaignBtn.onclick = () => {
+            confirmationDialog.style.display = 'none';
+            continueCampaign(subreddits);
+        };
+
+        cancelCampaignBtn.onclick = () => {
+            confirmationDialog.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-rocket"></i> Launch Campaign';
+        };
+    }
+
+    async function continueCampaign(subreddits) {
         try {
-            const res = await fetch('/provider/spread_opinion', {
+            const res = await fetch('/provider/continue_campaign', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     'op': document.getElementById('opinion').value,
                     'post_count': parseInt(document.getElementById('post-count').value),
-                    'comment_count': parseInt(document.getElementById('comment-count').value)
+                    'comment_count': parseInt(document.getElementById('comment-count').value),
+                    'subreddits': subreddits
                 })
             });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.msg || `HTTP error! status: ${res.status}`);
-            }
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
 
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) {
-                    addLogEntry({status: 'Stream finished.'});
-                    break;
-                }
+                if (done) break;
                 
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n');
@@ -110,10 +361,9 @@
                         if (dataPart) {
                             try {
                                 const jsonData = JSON.parse(dataPart);
-                                addLogEntry(jsonData);
+                                await handleStream(jsonData);
                             } catch (e) {
-                                console.error('Error parsing JSON:', e);
-                                addLogEntry({status: 'Error', message: 'Received invalid data from server.'});
+                                console.error('Error parsing JSON:', e, dataPart);
                             }
                         }
                     }
@@ -121,14 +371,78 @@
             }
 
         } catch (error) {
-            addLogEntry({status: 'Error', message: error.message});
-            if (error.message.includes('401') || error.message.includes('422')) {
-                logout();
-            }
+            console.error('Campaign Error:', error);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Start Campaign';
+            submitBtn.innerHTML = '<i class="fas fa-rocket"></i> Launch Campaign';
         }
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        dashboard.classList.remove('hidden');
+        
+        // Clear previous campaign content, but not the subreddit editor structure
+        contents.posts.innerHTML = '';
+        contents.comments.innerHTML = '';
+        contents.replies.innerHTML = '';
+        document.getElementById('subreddit-confirmation').classList.add('hidden');
+
+        setFocus('subreddits');
+        contents.subreddits.querySelector('.spinner').style.display = 'block';
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Campaign in Progress...';
+
+        try {
+            const res = await fetch('/provider/spread_opinion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    'op': document.getElementById('opinion').value,
+                    'post_count': parseInt(document.getElementById('post-count').value),
+                    'comment_count': parseInt(document.getElementById('comment-count').value)
+                })
+            });
+
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        const dataPart = line.substring(5).trim();
+                        if (dataPart) {
+                            try {
+                                const jsonData = JSON.parse(dataPart);
+                                await handleStream(jsonData);
+                            } catch (e) {
+                                console.error('Error parsing JSON:', e, dataPart);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Campaign Error:', error);
+        }
+    });
+
+    document.getElementById('post-count').addEventListener('input', (e) => {
+        document.getElementById('post-count-value').textContent = e.target.value;
+    });
+
+    document.getElementById('comment-count').addEventListener('input', (e) => {
+        document.getElementById('comment-count-value').textContent = e.target.value;
     });
 </script>
 {% endblock %}

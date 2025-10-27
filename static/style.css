@@ -39,7 +39,7 @@ body {
 
 /* --- Layout & Header --- */
 .container {
-    max-width: 800px;
+    max-width: 1600px;
     margin: 4rem auto;
     padding: 2.5rem;
     background: var(--card-bg-color);
@@ -51,7 +51,7 @@ body {
 }
 
 header {
-    max-width: 800px;
+    max-width: 1600px;
     margin: 2rem auto 0;
     padding: 0 2rem;
     display: flex;
@@ -374,6 +374,164 @@ button:disabled {
 
 }
 
+/* --- New Campaign Dashboard --- */
+#campaign-dashboard {
+    position: relative;
+    min-height: 650px; /* Adjust to fit content */
+    margin-top: 2rem;
+    display: none; /* Hidden by default */
+}
+
+#campaign-dashboard:not(.hidden) {
+    display: block;
+}
+
+.campaign-column {
+    position: absolute;
+    top: 0;
+    border-radius: 15px;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    background: rgba(22, 27, 34, 0.8);
+    backdrop-filter: blur(5px);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.campaign-column.focused {
+    left: 0;
+    width: calc(75% - 1.5rem);
+    height: 100%;
+    opacity: 1;
+    z-index: 10;
+}
+
+.campaign-column.minimized {
+    right: 0;
+    width: 25%;
+    height: 75px; /* Height of the collapsed title bar */
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 5;
+}
+
+.campaign-column.minimized:hover {
+    border-color: var(--accent-color);
+}
+
+.campaign-column.minimized .column-content {
+    display: none;
+}
+
+.column-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+}
+
+.column-title .fas {
+    margin-right: 0.5rem;
+    color: var(--accent-color);
+}
+
+.column-content {
+    height: 500px;
+    overflow-y: auto;
+    padding-right: 0.5rem; /* for scrollbar */
+}
+
+.subreddit-tag {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+    display: inline-block;
+    margin: 0.25rem;
+    animation: fadeIn 0.5s;
+}
+
+.campaign-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    animation: slideInUp 0.5s ease-out;
+    transition: all 0.3s ease;
+}
+
+.campaign-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    border-color: var(--accent-color);
+}
+
+.card-header a {
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.card-meta {
+    font-size: 0.8rem;
+    color: #8b949e;
+}
+
+.card-body p {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.card-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 15px;
+    display: inline-block;
+}
+
+.card-status .fas {
+    margin-right: 0.3rem;
+}
+
+/* Card Statuses */
+.campaign-card .fa-hourglass-start { color: #f39c12; }
+.campaign-card.selected .fa-check-circle { color: #2ecc71; }
+.campaign-card.filtered-out .fa-times-circle { color: #e74c3c; }
+.campaign-card.replied .fa-paper-plane { color: #3498db; }
+
+.campaign-card.filtered-out {
+    opacity: 0.5;
+    background: #2c3e50;
+}
+
+.hidden {
+    display: none;
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-left-color: var(--accent-color);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 /* --- Log Box Enhancements --- */
 .log-box {
     height: 500px;
@@ -434,6 +592,258 @@ button:disabled {
     display: inline-block;
     margin-right: 10px;
     vertical-align: middle;
+}
+
+.data-container {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--border-color);
+}
+
+.data-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-item:last-child {
+    border-bottom: none;
+}
+
+.data-item a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.data-item a:hover {
+    text-decoration: underline;
+}
+
+.data-item p {
+    margin: 0.25rem 0;
+    color: var(--text-color);
+}
+
+/* --- Sliders & Confirmation UI --- */
+.slider-group {
+    flex: 1;
+    padding: 0.5rem;
+}
+.slider-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.slider-group span {
+    font-weight: 600;
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    padding: 0.2rem 0.6rem;
+    border-radius: 5px;
+    min-width: 30px;
+    text-align: center;
+}
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 5px;
+    outline: none;
+    padding: 0;
+    transition: background 0.3s;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--accent-color);
+    cursor: pointer;
+    border-radius: 50%;
+    border: 3px solid var(--bg-color);
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: var(--accent-color);
+    cursor: pointer;
+    border-radius: 50%;
+    border: 3px solid var(--bg-color);
+}
+
+#subreddit-confirmation {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 1rem;
+    animation: fadeIn 0.5s;
+}
+#subreddit-confirmation h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+#subreddit-confirmation p {
+    font-size: 0.9rem;
+    color: #8b949e;
+    margin-bottom: 1rem;
+}
+#subreddit-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+.subreddit-tag {
+    display: inline-flex; /* Use flexbox for alignment */
+    align-items: center;   /* Vertically center items */
+    gap: 0.5rem;           /* Space between text and button */
+    padding-right: 0.6rem; /* Adjust padding */
+}
+.subreddit-tag .remove-tag-btn {
+    cursor: pointer;
+    color: var(--bg-color);
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    font-size: 0.9rem; /* Make the 'x' smaller */
+    line-height: 1; /* Ensure it doesn't add extra height */
+    background: transparent;
+    border: none;
+    padding: 0.2rem; /* Add a little clickable area */
+}
+.subreddit-tag .remove-tag-btn:hover {
+    opacity: 1;
+}
+.add-subreddit-form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.add-subreddit-form input {
+    flex-grow: 1;
+}
+.add-subreddit-form button, #confirm-subreddits-btn {
+    flex-shrink: 0;
+}
+#confirm-subreddits-btn {
+    width: 100%;
+}
+
+/* --- Animation Keyframes --- */
+@keyframes flyIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scanEffect {
+    0% {
+        background-position: -100% 0;
+    }
+    100% {
+        background-position: 100% 0;
+    }
+}
+
+@keyframes fadeOutShrink {
+    from {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+/* --- Enhanced Card Styles --- */
+.campaign-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.campaign-card.scanning::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+    animation: scanEffect 1.5s ease-in-out infinite;
+}
+
+.campaign-card.filtered-out {
+    animation: fadeOutShrink 0.5s forwards;
+}
+
+.subreddit-tag {
+    opacity: 0;
+    animation: flyIn 0.5s forwards;
+}
+
+/* --- Confirmation Dialog --- */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.dialog-box {
+    background: var(--card-bg-color);
+    padding: 2rem;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+    animation: slideInUp 0.4s ease-out;
+}
+
+.dialog-box h2 {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.dialog-box p {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+}
+
+#confirmation-summary {
+    margin-bottom: 2rem;
+    background: rgba(13, 17, 23, 0.8);
+    padding: 1rem;
+    border-radius: 10px;
+}
+
+#confirmation-summary p {
+    margin-bottom: 0.75rem;
+}
+
+#confirmation-summary strong {
+    color: var(--accent-color);
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
 }
 
 

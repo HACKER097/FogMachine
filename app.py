@@ -5,6 +5,7 @@ import bcrypt
 import os
 from dotenv import load_dotenv
 import json
+import AI
 
 load_dotenv()
 
@@ -130,7 +131,7 @@ def logout():
     return response
 
 
-from Fog import FogMachine
+from Fog import FogMachine, instances as fog_instances
 from Bot import Instance
 
 # --- Worker Routes ---
@@ -171,11 +172,37 @@ def spread_opinion_route():
 
     data = request.get_json()
     op = data.get('op')
-    post_count = data.get('post_count', 10)
-    comment_count = data.get('comment_count', 10)
 
     if not op:
         return jsonify({"msg": "Opinion is required"}), 400
+
+    def generate_logs():
+        try:
+            fog_machine = FogMachine(fog_instances, os.getenv("TEST"))
+            subreddits = fog_machine.get_subreddits(op)
+            yield f"data: {json.dumps({'status': 'Found subreddits', 'subreddits': subreddits})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'status': 'Error', 'message': str(e)})}\n\n"
+
+    return Response(generate_logs(), mimetype='text/event-stream')
+
+
+@app.route('/provider/continue_campaign', methods=['POST'])
+@jwt_required()
+def continue_campaign_route():
+    current_user_json = get_jwt_identity()
+    current_user = json.loads(current_user_json)
+    if current_user['role'] != 'provider':
+        return jsonify({"msg": "Providers only"}), 403
+
+    data = request.get_json()
+    op = data.get('op')
+    post_count = data.get('post_count', 10)
+    comment_count = data.get('comment_count', 10)
+    subreddits = data.get('subreddits')
+
+    if not op or not subreddits:
+        return jsonify({"msg": "Opinion and subreddits are required"}), 400
 
     db = get_db()
     # Create a new campaign
@@ -207,7 +234,7 @@ def spread_opinion_route():
                     raise Exception("No worker credentials found.")
 
                 fog_machine = FogMachine(instances, os.getenv("TEST"))
-                for log_message in fog_machine.spread_opinion(op, post_count, comment_count):
+                for log_message in fog_machine.spread_opinion(op, post_count, comment_count, subreddits):
                     yield f"data: {json.dumps(log_message)}\n\n"
 
                 db = get_db()
@@ -223,6 +250,7 @@ def spread_opinion_route():
                 yield f"data: {json.dumps({'status': 'Error', 'message': str(e)})}\n\n"
 
     return Response(generate_logs(), mimetype='text/event-stream')
+
 
 
 if __name__ == '__main__':
