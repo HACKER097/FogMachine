@@ -159,9 +159,9 @@
     }
     
     function createReplyCard(reply) {
-        const card = createElement('div', ['campaign-card', 'reply-card'], `
+        const card = createElement('a', ['campaign-card', 'reply-card'], `
             <div class="card-header">
-                <a href="${reply.url}" target="_blank">Reply Sent</a>
+                Reply Sent
                  <span class="card-meta">to ${reply.original_comment.author}</span>
             </div>
             <div class="card-body">
@@ -169,6 +169,11 @@
             </div>
             <div class="card-status"><i class="fas fa-check-circle"></i> Sent</div>
         `);
+        card.href = reply.url;
+        card.target = '_blank';
+        card.style.textDecoration = 'none';
+        card.style.color = 'inherit';
+        card.style.display = 'block';
         contents.replies.appendChild(card);
         return card;
     }

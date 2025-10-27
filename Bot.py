@@ -35,7 +35,7 @@ class Bot:
             print()
             return {
                 "user_id": self.userid,
-                "url": f"https://reddit.com{c['permalink']}",
+                "url": c['permalink'],
                 "original_comment": c,
                 "reply_text": text
             }
